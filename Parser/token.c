@@ -60,6 +60,7 @@ const char * const _PyParser_TokenNames[] = {
     "RARROW",
     "ELLIPSIS",
     "COLONEQUAL",
+    "Y_EXC_MISHANDLING",
     "OP",
     "AWAIT",
     "ASYNC",
@@ -94,6 +95,7 @@ PyToken_OneChar(int c1)
     case '<': return LESS;
     case '=': return EQUAL;
     case '>': return GREATER;
+    case '?': return Y_EXC_MISHANDLING;
     case '@': return AT;
     case '[': return LSQB;
     case ']': return RSQB;

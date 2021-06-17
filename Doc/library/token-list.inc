@@ -201,6 +201,10 @@
 
    Token value for ``":="``.
 
+.. data:: Y_EXC_MISHANDLING
+
+   Token value for ``"?"``.
+
 .. data:: OP
 
 .. data:: AWAIT
