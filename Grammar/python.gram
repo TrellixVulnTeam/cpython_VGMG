@@ -583,7 +583,7 @@ lambda_param_maybe_default[NameDefaultPair*]:
 lambda_param[arg_ty]: a=NAME { _PyAST_arg(a->v.Name.id, NULL, NULL, EXTRA) }
 
 y_exc_mishandle[expr_ty] (memo):
-    | a=disjunction '?' b=y_exc_mishandle { _Py_Y_ExcMishandle(a, Mod, b, EXTRA) }
+    | a=disjunction '?' b=y_exc_mishandle { _Py_Y_ExcMishandle(a, b, EXTRA) }
     | disjunction
 disjunction[expr_ty] (memo):
     | a=conjunction b=('or' c=conjunction { c })+ { _PyAST_BoolOp(
