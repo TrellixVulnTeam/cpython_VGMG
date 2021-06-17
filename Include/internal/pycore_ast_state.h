@@ -142,6 +142,7 @@ struct ast_state {
     PyObject *UnaryOp_type;
     PyObject *While_type;
     PyObject *With_type;
+    PyObject *Y_ExcMishandle_type;
     PyObject *YieldFrom_type;
     PyObject *Yield_type;
     PyObject *__dict__;
@@ -180,6 +181,7 @@ struct ast_state {
     PyObject *end_col_offset;
     PyObject *end_lineno;
     PyObject *exc;
+    PyObject *except_body;
     PyObject *excepthandler_type;
     PyObject *expr_context_type;
     PyObject *expr_type;
@@ -236,6 +238,7 @@ struct ast_state {
     PyObject *target;
     PyObject *targets;
     PyObject *test;
+    PyObject *try_body;
     PyObject *type;
     PyObject *type_comment;
     PyObject *type_ignore_type;

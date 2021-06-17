@@ -156,6 +156,7 @@ void _PyAST_Fini(PyInterpreterState *interp)
     Py_CLEAR(state->UnaryOp_type);
     Py_CLEAR(state->While_type);
     Py_CLEAR(state->With_type);
+    Py_CLEAR(state->Y_ExcMishandle_type);
     Py_CLEAR(state->YieldFrom_type);
     Py_CLEAR(state->Yield_type);
     Py_CLEAR(state->__dict__);
@@ -194,6 +195,7 @@ void _PyAST_Fini(PyInterpreterState *interp)
     Py_CLEAR(state->end_col_offset);
     Py_CLEAR(state->end_lineno);
     Py_CLEAR(state->exc);
+    Py_CLEAR(state->except_body);
     Py_CLEAR(state->excepthandler_type);
     Py_CLEAR(state->expr_context_type);
     Py_CLEAR(state->expr_type);
@@ -250,6 +252,7 @@ void _PyAST_Fini(PyInterpreterState *interp)
     Py_CLEAR(state->target);
     Py_CLEAR(state->targets);
     Py_CLEAR(state->test);
+    Py_CLEAR(state->try_body);
     Py_CLEAR(state->type);
     Py_CLEAR(state->type_comment);
     Py_CLEAR(state->type_ignore_type);
@@ -300,6 +303,7 @@ static int init_identifiers(struct ast_state *state)
     if ((state->end_col_offset = PyUnicode_InternFromString("end_col_offset")) == NULL) return 0;
     if ((state->end_lineno = PyUnicode_InternFromString("end_lineno")) == NULL) return 0;
     if ((state->exc = PyUnicode_InternFromString("exc")) == NULL) return 0;
+    if ((state->except_body = PyUnicode_InternFromString("except_body")) == NULL) return 0;
     if ((state->finalbody = PyUnicode_InternFromString("finalbody")) == NULL) return 0;
     if ((state->format_spec = PyUnicode_InternFromString("format_spec")) == NULL) return 0;
     if ((state->func = PyUnicode_InternFromString("func")) == NULL) return 0;
@@ -347,6 +351,7 @@ static int init_identifiers(struct ast_state *state)
     if ((state->target = PyUnicode_InternFromString("target")) == NULL) return 0;
     if ((state->targets = PyUnicode_InternFromString("targets")) == NULL) return 0;
     if ((state->test = PyUnicode_InternFromString("test")) == NULL) return 0;
+    if ((state->try_body = PyUnicode_InternFromString("try_body")) == NULL) return 0;
     if ((state->type = PyUnicode_InternFromString("type")) == NULL) return 0;
     if ((state->type_comment = PyUnicode_InternFromString("type_comment")) == NULL) return 0;
     if ((state->type_ignores = PyUnicode_InternFromString("type_ignores")) == NULL) return 0;
@@ -517,6 +522,10 @@ static PyObject* ast2obj_expr(struct ast_state *state, void*);
 static const char * const BoolOp_fields[]={
     "op",
     "values",
+};
+static const char * const Y_ExcMishandle_fields[]={
+    "try_body",
+    "except_body",
 };
 static const char * const NamedExpr_fields[]={
     "target",
@@ -1296,6 +1305,7 @@ init_types(struct ast_state *state)
     if (!state->Continue_type) return 0;
     state->expr_type = make_type(state, "expr", state->AST_type, NULL, 0,
         "expr = BoolOp(boolop op, expr* values)\n"
+        "     | Y_ExcMishandle(expr try_body, expr except_body)\n"
         "     | NamedExpr(expr target, expr value)\n"
         "     | BinOp(expr left, operator op, expr right)\n"
         "     | UnaryOp(unaryop op, expr operand)\n"
@@ -1333,6 +1343,11 @@ init_types(struct ast_state *state)
                                    BoolOp_fields, 2,
         "BoolOp(boolop op, expr* values)");
     if (!state->BoolOp_type) return 0;
+    state->Y_ExcMishandle_type = make_type(state, "Y_ExcMishandle",
+                                           state->expr_type,
+                                           Y_ExcMishandle_fields, 2,
+        "Y_ExcMishandle(expr try_body, expr except_body)");
+    if (!state->Y_ExcMishandle_type) return 0;
     state->NamedExpr_type = make_type(state, "NamedExpr", state->expr_type,
                                       NamedExpr_fields, 2,
         "NamedExpr(expr target, expr value)");
@@ -2559,6 +2574,35 @@ _PyAST_BoolOp(boolop_ty op, asdl_expr_seq * values, int lineno, int col_offset,
     p->kind = BoolOp_kind;
     p->v.BoolOp.op = op;
     p->v.BoolOp.values = values;
+    p->lineno = lineno;
+    p->col_offset = col_offset;
+    p->end_lineno = end_lineno;
+    p->end_col_offset = end_col_offset;
+    return p;
+}
+
+expr_ty
+_PyAST_Y_ExcMishandle(expr_ty try_body, expr_ty except_body, int lineno, int
+                      col_offset, int end_lineno, int end_col_offset, PyArena
+                      *arena)
+{
+    expr_ty p;
+    if (!try_body) {
+        PyErr_SetString(PyExc_ValueError,
+                        "field 'try_body' is required for Y_ExcMishandle");
+        return NULL;
+    }
+    if (!except_body) {
+        PyErr_SetString(PyExc_ValueError,
+                        "field 'except_body' is required for Y_ExcMishandle");
+        return NULL;
+    }
+    p = (expr_ty)_PyArena_Malloc(arena, sizeof(*p));
+    if (!p)
+        return NULL;
+    p->kind = Y_ExcMishandle_kind;
+    p->v.Y_ExcMishandle.try_body = try_body;
+    p->v.Y_ExcMishandle.except_body = except_body;
     p->lineno = lineno;
     p->col_offset = col_offset;
     p->end_lineno = end_lineno;
@@ -4194,6 +4238,21 @@ ast2obj_expr(struct ast_state *state, void* _o)
                              ast2obj_expr);
         if (!value) goto failed;
         if (PyObject_SetAttr(result, state->values, value) == -1)
+            goto failed;
+        Py_DECREF(value);
+        break;
+    case Y_ExcMishandle_kind:
+        tp = (PyTypeObject *)state->Y_ExcMishandle_type;
+        result = PyType_GenericNew(tp, NULL, NULL);
+        if (!result) goto failed;
+        value = ast2obj_expr(state, o->v.Y_ExcMishandle.try_body);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->try_body, value) == -1)
+            goto failed;
+        Py_DECREF(value);
+        value = ast2obj_expr(state, o->v.Y_ExcMishandle.except_body);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->except_body, value) == -1)
             goto failed;
         Py_DECREF(value);
         break;
@@ -7987,6 +8046,54 @@ obj2ast_expr(struct ast_state *state, PyObject* obj, expr_ty* out, PyArena*
         if (*out == NULL) goto failed;
         return 0;
     }
+    tp = state->Y_ExcMishandle_type;
+    isinstance = PyObject_IsInstance(obj, tp);
+    if (isinstance == -1) {
+        return 1;
+    }
+    if (isinstance) {
+        expr_ty try_body;
+        expr_ty except_body;
+
+        if (_PyObject_LookupAttr(obj, state->try_body, &tmp) < 0) {
+            return 1;
+        }
+        if (tmp == NULL) {
+            PyErr_SetString(PyExc_TypeError, "required field \"try_body\" missing from Y_ExcMishandle");
+            return 1;
+        }
+        else {
+            int res;
+            if (Py_EnterRecursiveCall(" while traversing 'Y_ExcMishandle' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &try_body, arena);
+            Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
+        if (_PyObject_LookupAttr(obj, state->except_body, &tmp) < 0) {
+            return 1;
+        }
+        if (tmp == NULL) {
+            PyErr_SetString(PyExc_TypeError, "required field \"except_body\" missing from Y_ExcMishandle");
+            return 1;
+        }
+        else {
+            int res;
+            if (Py_EnterRecursiveCall(" while traversing 'Y_ExcMishandle' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &except_body, arena);
+            Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
+        *out = _PyAST_Y_ExcMishandle(try_body, except_body, lineno, col_offset,
+                                     end_lineno, end_col_offset, arena);
+        if (*out == NULL) goto failed;
+        return 0;
+    }
     tp = state->NamedExpr_type;
     isinstance = PyObject_IsInstance(obj, tp);
     if (isinstance == -1) {
@@ -11718,6 +11825,10 @@ astmodule_exec(PyObject *m)
         return -1;
     }
     if (PyModule_AddObjectRef(m, "BoolOp", state->BoolOp_type) < 0) {
+        return -1;
+    }
+    if (PyModule_AddObjectRef(m, "Y_ExcMishandle", state->Y_ExcMishandle_type)
+        < 0) {
         return -1;
     }
     if (PyModule_AddObjectRef(m, "NamedExpr", state->NamedExpr_type) < 0) {
