@@ -53,6 +53,7 @@ ATEQUAL                 '@='
 RARROW                  '->'
 ELLIPSIS                '...'
 COLONEQUAL              ':='
+Y_EXC_MISHANDLING       '?'
 
 OP
 AWAIT

@@ -327,8 +327,8 @@ expressions[expr_ty]:
     | a=expression ',' { _Py_Tuple(CHECK(_PyPegen_singleton_seq(p, a)), Load, EXTRA) }
     | expression
 expression[expr_ty] (memo):
-    | a=disjunction 'if' b=disjunction 'else' c=expression { _Py_IfExp(b, a, c, EXTRA) }
-    | disjunction
+    | a=y_exc_mishandle 'if' b=y_exc_mishandle 'else' c=expression { _Py_IfExp(b, a, c, EXTRA) }
+    | y_exc_mishandle
     | lambdef
 
 lambdef[expr_ty]:
@@ -380,6 +380,9 @@ lambda_param_maybe_default[NameDefaultPair*]:
     | a=lambda_param c=default? &':' { _PyPegen_name_default_pair(p, a, c, NULL) }
 lambda_param[arg_ty]: a=NAME { _Py_arg(a->v.Name.id, NULL, NULL, EXTRA) }
 
+y_exc_mishandle[expr_ty] (memo):
+    | a=disjunction '?' b=y_exc_mishandle { _Py_Y_ExcMishandle(a, Mod, b, EXTRA) }
+    | disjunction
 disjunction[expr_ty] (memo):
     | a=conjunction b=('or' c=conjunction { c })+ { _Py_BoolOp(
         Or,
@@ -522,9 +525,9 @@ kvpair[KeyValuePair*]: a=expression ':' b=expression { _PyPegen_key_value_pair(p
 for_if_clauses[asdl_seq*]:
     | for_if_clause+
 for_if_clause[comprehension_ty]:
-    | ASYNC 'for' a=star_targets 'in' ~ b=disjunction c=('if' z=disjunction { z })* {
+    | ASYNC 'for' a=star_targets 'in' ~ b=y_exc_mishandle c=('if' z=y_exc_mishandle { z })* {
         CHECK_VERSION(6, "Async comprehensions are", _Py_comprehension(a, b, c, 1, p->arena)) }
-    | 'for' a=star_targets 'in' ~ b=disjunction c=('if' z=disjunction { z })* {
+    | 'for' a=star_targets 'in' ~ b=y_exc_mishandle c=('if' z=y_exc_mishandle { z })* {
         _Py_comprehension(a, b, c, 0, p->arena) }
     | invalid_for_target
 
