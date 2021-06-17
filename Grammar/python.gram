@@ -528,8 +528,8 @@ expressions[expr_ty]:
     | expression
 expression[expr_ty] (memo):
     | invalid_expression
-    | a=disjunction 'if' b=disjunction 'else' c=expression { _PyAST_IfExp(b, a, c, EXTRA) }
-    | disjunction
+    | a=z_exc_mishandle 'if' b=z_exc_mishandle 'else' c=expression { _PyAST_IfExp(b, a, c, EXTRA) }
+    | z_exc_mishandle
     | lambdef
 
 lambdef[expr_ty]:
@@ -582,6 +582,9 @@ lambda_param_maybe_default[NameDefaultPair*]:
     | a=lambda_param c=default? &':' { _PyPegen_name_default_pair(p, a, c, NULL) }
 lambda_param[arg_ty]: a=NAME { _PyAST_arg(a->v.Name.id, NULL, NULL, EXTRA) }
 
+y_exc_mishandle[expr_ty] (memo):
+    | a=disjunction '?' b=y_exc_mishandle { _Py_Y_ExcMishandle(a, Mod, b, EXTRA) }
+    | disjunction
 disjunction[expr_ty] (memo):
     | a=conjunction b=('or' c=conjunction { c })+ { _PyAST_BoolOp(
         Or,
@@ -732,9 +735,9 @@ kvpair[KeyValuePair*]: a=expression ':' b=expression { _PyPegen_key_value_pair(p
 for_if_clauses[asdl_comprehension_seq*]:
     | a[asdl_comprehension_seq*]=for_if_clause+ { a }
 for_if_clause[comprehension_ty]:
-    | ASYNC 'for' a=star_targets 'in' ~ b=disjunction c[asdl_expr_seq*]=('if' z=disjunction { z })* {
+    | ASYNC 'for' a=star_targets 'in' ~ b=z_exc_mishandle c[asdl_expr_seq*]=('if' z=z_exc_mishandle { z })* {
         CHECK_VERSION(comprehension_ty, 6, "Async comprehensions are", _PyAST_comprehension(a, b, c, 1, p->arena)) }
-    | 'for' a=star_targets 'in' ~ b=disjunction c[asdl_expr_seq*]=('if' z=disjunction { z })* {
+    | 'for' a=star_targets 'in' ~ b=z_exc_mishandle c[asdl_expr_seq*]=('if' z=z_exc_mishandle { z })* {
         _PyAST_comprehension(a, b, c, 0, p->arena) }
     | invalid_for_target
 
@@ -844,13 +847,13 @@ invalid_kwarg:
             a, b, "expression cannot contain assignment, perhaps you meant \"==\"?") }
 
 expression_without_invalid[expr_ty]:
-    | a=disjunction 'if' b=disjunction 'else' c=expression { _PyAST_IfExp(b, a, c, EXTRA) }
-    | disjunction
+    | a=z_exc_mishandle 'if' b=z_exc_mishandle 'else' c=expression { _PyAST_IfExp(b, a, c, EXTRA) }
+    | z_exc_mishandle
     | lambdef
 invalid_expression:
     # !(NAME STRING) is not matched so we don't show this error with some invalid string prefixes like: kf"dsfsdf"
     # Soft keywords need to also be ignored because they can be parsed as NAME NAME
-    | !(NAME STRING | SOFT_KEYWORD) a=disjunction b=expression_without_invalid {
+    | !(NAME STRING | SOFT_KEYWORD) a=z_exc_mishandle b=expression_without_invalid {
         RAISE_SYNTAX_ERROR_KNOWN_RANGE(a, b, "invalid syntax. Perhaps you forgot a comma?") }
 
 invalid_named_expression:
