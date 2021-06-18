@@ -227,6 +227,9 @@ validate_expr(expr_ty exp, expr_context_ty ctx)
             return 0;
         }
         return validate_exprs(exp->v.BoolOp.values, Load, 0);
+    case Y_ExcMishandle_kind:
+        return validate_expr(exp->v.Y_ExcMishandle.try_body, Load) &&
+            validate_expr(exp->v.Y_ExcMishandle.except_body, Load);
     case BinOp_kind:
         return validate_expr(exp->v.BinOp.left, Load) &&
             validate_expr(exp->v.BinOp.right, Load);
