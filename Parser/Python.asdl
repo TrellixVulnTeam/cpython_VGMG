@@ -53,6 +53,7 @@ module Python
 
           -- BoolOp() can use left & right?
     expr = BoolOp(boolop op, expr* values)
+         | Y_ExcMishandle(expr try_body, expr except_body)
          | NamedExpr(expr target, expr value)
          | BinOp(expr left, operator op, expr right)
          | UnaryOp(unaryop op, expr operand)

@@ -1540,6 +1540,10 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
     case BoolOp_kind:
         VISIT_SEQ(st, expr, e->v.BoolOp.values);
         break;
+    case Y_ExcMishandle_kind:
+        VISIT(st, expr, e->v.Y_ExcMishandle.try_body);
+        VISIT(st, expr, e->v.Y_ExcMishandle.except_body);
+        break;
     case BinOp_kind:
         VISIT(st, expr, e->v.BinOp.left);
         VISIT(st, expr, e->v.BinOp.right);
