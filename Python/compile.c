@@ -3174,6 +3174,51 @@ compiler_try(struct compiler *c, stmt_ty s) {
         return compiler_try_except(c, s);
 }
 
+static int
+compiler_exception_mishandling(struct compiler *c, expr_ty e) {
+    basicblock *body, *except, *orelse, *cleanup_body, *end;
+    assert(e->kind == Y_ExcMishandle_kind);
+    body = compiler_new_block(c);
+    except = compiler_new_block(c);
+    orelse = compiler_new_block(c);
+    end = compiler_new_block(c);
+    if (body == NULL || except == NULL || orelse == NULL || end == NULL)
+        return 0;
+    ADDOP_JREL(c, SETUP_FINALLY, except);
+    compiler_use_next_block(c, body);
+    if (!compiler_push_fblock(c, TRY_EXCEPT, body, NULL, NULL))
+        return 0;
+    VISIT(c, expr, e->v.Y_ExcMishandle.try_body);
+    ADDOP(c, POP_BLOCK);
+    compiler_pop_fblock(c, TRY_EXCEPT, body);
+    ADDOP_JREL(c, JUMP_FORWARD, orelse);
+    compiler_use_next_block(c, except);
+    if (!compiler_push_fblock(c, EXCEPTION_HANDLER, NULL, NULL, NULL))
+        return 0;
+    except = compiler_new_block(c);
+    if (except == NULL)
+        return 0;
+    ADDOP(c, POP_TOP);
+    cleanup_body = compiler_new_block(c);
+    if (!cleanup_body)
+        return 0;
+    ADDOP(c, POP_TOP);
+    ADDOP(c, POP_TOP);
+    compiler_use_next_block(c, cleanup_body);
+    if (!compiler_push_fblock(c, HANDLER_CLEANUP, cleanup_body, NULL, NULL))
+        return 0;
+    VISIT(c, expr, e->v.Y_ExcMishandle.except_body);
+    ADDOP(c, ROT_FOUR);
+    compiler_pop_fblock(c, HANDLER_CLEANUP, cleanup_body);
+    ADDOP(c, POP_EXCEPT);
+    ADDOP_JREL(c, JUMP_FORWARD, end);
+    compiler_use_next_block(c, except);
+    compiler_pop_fblock(c, EXCEPTION_HANDLER, NULL);
+    ADDOP(c, RERAISE);
+    compiler_use_next_block(c, orelse);
+    compiler_use_next_block(c, end);
+    return 1;
+}
 
 static int
 compiler_import_as(struct compiler *c, identifier name, identifier asname)
@@ -4996,6 +5041,8 @@ compiler_visit_expr1(struct compiler *c, expr_ty e)
         ADDOP(c, DUP_TOP);
         VISIT(c, expr, e->v.NamedExpr.target);
         break;
+    case Y_ExcMishandle_kind:
+        return compiler_exception_mishandling(c, e);
     case BoolOp_kind:
         return compiler_boolop(c, e);
     case BinOp_kind:
