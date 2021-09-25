@@ -682,8 +682,8 @@ PIPE_MAX_SIZE = 4 * 1024 * 1024 + 1
 # A constant likely larger than the underlying OS socket buffer size, to make
 # writes blocking.
 # The socket buffer sizes can usually be tuned system-wide (e.g. through sysctl
-# on Linux), or on a per-socket basis (SO_SNDBUF/SO_RCVBUF). See issue #18643
-# for a discussion of this number).
+# on Linux), or on a per-socket basis (SO_SNDBUF/SO_RCVBUF).  See issue #18643
+# for a discussion of this number.
 SOCK_MAX_SIZE = 16 * 1024 * 1024 + 1
 
 # decorator for skipping tests on non-IEEE 754 platforms
@@ -1525,9 +1525,8 @@ def check_sizeof(test, o, size):
 # Decorator for running a function in a different locale, correctly resetting
 # it afterwards.
 
+@contextlib.contextmanager
 def run_with_locale(catstr, *locales):
-    def decorator(func):
-        def inner(*args, **kwds):
             try:
                 import locale
                 category = getattr(locale, catstr)
@@ -1546,16 +1545,11 @@ def run_with_locale(catstr, *locales):
                     except:
                         pass
 
-            # now run the function, resetting the locale on exceptions
             try:
-                return func(*args, **kwds)
+                yield
             finally:
                 if locale and orig_locale:
                     locale.setlocale(category, orig_locale)
-        inner.__name__ = func.__name__
-        inner.__doc__ = func.__doc__
-        return inner
-    return decorator
 
 #=======================================================================
 # Decorator for running a function in a specific timezone, correctly
