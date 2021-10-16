@@ -1238,6 +1238,7 @@ compiler_addop_line(struct compiler *c, int opcode, int line)
     basicblock *b;
     struct instr *i;
     int off;
+    printf("opcode: %d\n", opcode);
     assert(!HAS_ARG(opcode));
     off = compiler_next_instr(c->u->u_curblock);
     if (off < 0)
@@ -3289,14 +3290,14 @@ compiler_exception_mishandling(struct compiler *c, expr_ty e) {
     end = compiler_new_block(c);
     if (body == NULL || except == NULL || orelse == NULL || end == NULL)
         return 0;
-    ADDOP_JREL(c, SETUP_FINALLY, except);
+    ADDOP_JUMP(c, SETUP_FINALLY, except);
     compiler_use_next_block(c, body);
     if (!compiler_push_fblock(c, TRY_EXCEPT, body, NULL, NULL))
         return 0;
     VISIT(c, expr, e->v.Y_ExcMishandle.try_body);
     ADDOP(c, POP_BLOCK);
     compiler_pop_fblock(c, TRY_EXCEPT, body);
-    ADDOP_JREL(c, JUMP_FORWARD, orelse);
+    ADDOP_JUMP_NOLINE(c, JUMP_FORWARD, orelse);
     compiler_use_next_block(c, except);
     if (!compiler_push_fblock(c, EXCEPTION_HANDLER, NULL, NULL, NULL))
         return 0;
@@ -3316,10 +3317,10 @@ compiler_exception_mishandling(struct compiler *c, expr_ty e) {
     ADDOP(c, ROT_FOUR);
     compiler_pop_fblock(c, HANDLER_CLEANUP, cleanup_body);
     ADDOP(c, POP_EXCEPT);
-    ADDOP_JREL(c, JUMP_FORWARD, end);
+    ADDOP_JUMP(c, JUMP_FORWARD, end);
     compiler_use_next_block(c, except);
     compiler_pop_fblock(c, EXCEPTION_HANDLER, NULL);
-    ADDOP(c, RERAISE);
+    ADDOP_I(c, RERAISE, 0);
     compiler_use_next_block(c, orelse);
     compiler_use_next_block(c, end);
     return 1;
