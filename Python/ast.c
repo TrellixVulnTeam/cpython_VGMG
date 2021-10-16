@@ -240,8 +240,8 @@ validate_expr(struct validator *state, expr_ty exp, expr_context_ty ctx)
         ret = validate_exprs(state, exp->v.BoolOp.values, Load, 0);
         break;
     case Y_ExcMishandle_kind:
-        ret = validate_expr(exp->v.Y_ExcMishandle.try_body, Load) &&
-            validate_expr(exp->v.Y_ExcMishandle.except_body, Load);
+        ret = validate_expr(state, exp->v.Y_ExcMishandle.try_body, Load) &&
+            validate_expr(state, exp->v.Y_ExcMishandle.except_body, Load);
         break;
     case BinOp_kind:
         ret = validate_expr(state, exp->v.BinOp.left, Load) &&
