@@ -675,4 +675,24 @@ if __name__ == '__main__':
 
 
 # WHYTHON FUNCTION COMPOSITION HACKS
-sys.y_compose = lambda f, g: lambda *args, **kwargs: f(g(*args, **kwargs))
+
+STDLIB = __file__.removesuffix("site.py")
+
+# note: get this before we install the y_compose hook
+GenericAlias = type(type[type])
+
+
+def y_compose(f, g):
+    if (
+        # if f[g] might form a T1[T2] generic type alias
+        isinstance(f, type) and isinstance(g, type) and
+        # and we're in the standard library
+        sys._getframe(0).f_back.f_code.co_filename.startswith(STDLIB)
+    ):
+        # then restore normal behaviour
+        return GenericAlias(f, g)
+    # else compose
+    return lambda *args, **kwargs: f(g(*args, **kwargs))
+
+
+sys.y_compose = y_compose
