@@ -672,3 +672,7 @@ def _script():
 
 if __name__ == '__main__':
     _script()
+
+
+# WHYTHON FUNCTION COMPOSITION HACKS
+sys.y_compose = lambda f, g: lambda *args, **kwargs: f(g(*args, **kwargs))

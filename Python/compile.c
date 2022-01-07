@@ -4220,7 +4220,6 @@ check_subscripter(struct compiler *c, expr_ty e)
     case Set_kind:
     case SetComp_kind:
     case GeneratorExp_kind:
-    case Lambda_kind:
         return compiler_warn(c, "'%.200s' object is not subscriptable; "
                                 "perhaps you missed a comma?",
                                 infer_type(e)->tp_name);

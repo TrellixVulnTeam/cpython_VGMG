@@ -160,6 +160,18 @@ PyObject_GetItem(PyObject *o, PyObject *key)
         return item;
     }
 
+    if (PyCallable_Check(o) && PyCallable_Check(key)) {
+        // (Whython): function composition 
+        // o[key] == lambda *a: o(key(*a))
+        PyObject *compose = PySys_GetObject("y_compose");
+        if (compose != NULL) {
+            PyObject *result = PyObject_CallFunctionObjArgs(compose, o, key);
+            if (result != NULL) {
+                return result;
+            }
+        }
+    }
+
     PySequenceMethods *ms = Py_TYPE(o)->tp_as_sequence;
     if (ms && ms->sq_item) {
         if (_PyIndex_Check(key)) {
