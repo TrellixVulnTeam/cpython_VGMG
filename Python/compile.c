@@ -1238,7 +1238,6 @@ compiler_addop_line(struct compiler *c, int opcode, int line)
     basicblock *b;
     struct instr *i;
     int off;
-    printf("opcode: %d\n", opcode);
     assert(!HAS_ARG(opcode));
     off = compiler_next_instr(c->u->u_curblock);
     if (off < 0)
