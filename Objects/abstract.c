@@ -165,10 +165,7 @@ PyObject_GetItem(PyObject *o, PyObject *key)
         // o[key] == lambda *a: o(key(*a))
         PyObject *compose = PySys_GetObject("y_compose");
         if (compose != NULL) {
-            PyObject *result = PyObject_CallFunctionObjArgs(compose, o, key);
-            if (result != NULL) {
-                return result;
-            }
+            return PyObject_CallFunctionObjArgs(compose, o, key);
         }
     }
 
